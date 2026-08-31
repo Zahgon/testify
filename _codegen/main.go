@@ -1,26 +1,11 @@
-// This program reads all assertion functions from the assert package and
-// automatically generates the corresponding requires and forwarded assertions
-
 package main
 
 import (
-	"bytes"
 	"flag"
-	"fmt"
-	"go/ast"
-	"go/build"
 	"go/doc"
-	"go/format"
-	"go/importer"
-	"go/parser"
-	"go/token"
 	"go/types"
-	"io"
 	"log"
 	"os"
-	"path"
-	"regexp"
-	"strings"
 	"text/template"
 
 	"github.com/stretchr/testify/_codegen/internal/imports"
@@ -53,163 +38,25 @@ func main() {
 }
 
 func generateCode(importer imports.Importer, funcs []testFunc) error {
-	buff := bytes.NewBuffer(nil)
-
-	tmplHead, tmplFunc, err := parseTemplates()
-	if err != nil {
-		return err
-	}
-
-	// Generate header
-	if err := tmplHead.Execute(buff, struct {
-		Name    string
-		Imports map[string]string
-	}{
-		*outputPkg,
-		importer.Imports(),
-	}); err != nil {
-		return err
-	}
-
-	// Generate funcs
-	for _, fn := range funcs {
-		buff.Write([]byte("\n\n"))
-		if err := tmplFunc.Execute(buff, &fn); err != nil {
-			return err
-		}
-	}
-
-	code, err := format.Source(buff.Bytes())
-	if err != nil {
-		return err
-	}
-
-	// Write file
-	output, err := outputFile()
-	if err != nil {
-		return err
-	}
-	defer output.Close()
-	_, err = io.Copy(output, bytes.NewReader(code))
-	return err
+	_ = "STUB: not implemented"
+	return nil
 }
 
 func parseTemplates() (*template.Template, *template.Template, error) {
-	tmplHead, err := template.New("header").Parse(headerTemplate)
-	if err != nil {
-		return nil, nil, err
-	}
-	if *tmplFile != "" {
-		f, err := os.ReadFile(*tmplFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		funcTemplate = string(f)
-	}
-	tmpl, err := template.New("function").Parse(funcTemplate)
-	if err != nil {
-		return nil, nil, err
-	}
-	return tmplHead, tmpl, nil
+	_ = "STUB: not implemented"
+	return nil, nil, nil
 }
 
-func outputFile() (*os.File, error) {
-	filename := *out
-	if filename == "-" || (filename == "" && *tmplFile == "") {
-		return os.Stdout, nil
-	}
-	if filename == "" {
-		filename = strings.TrimSuffix(strings.TrimSuffix(*tmplFile, ".tmpl"), ".go") + ".go"
-	}
-	return os.Create(filename)
-}
+func outputFile() (*os.File, error) { _ = "STUB: not implemented"; return nil, nil }
 
-// analyzeCode takes the types scope and the docs and returns the import
-// information and information about all the assertion functions.
 func analyzeCode(scope *types.Scope, docs *doc.Package) (imports.Importer, []testFunc, error) {
-	testingT := scope.Lookup("TestingT").Type().Underlying().(*types.Interface)
-
-	importer := imports.New(*outputPkg)
-	var funcs []testFunc
-	// Go through all the top level functions
-	for _, fdocs := range docs.Funcs {
-		// Find the function
-		obj := scope.Lookup(fdocs.Name)
-
-		fn, ok := obj.(*types.Func)
-		if !ok {
-			continue
-		}
-		// Check function signature has at least two arguments
-		sig := fn.Type().(*types.Signature)
-		if sig.Params().Len() < 2 {
-			continue
-		}
-		// Check first argument is of type testingT
-		first, ok := sig.Params().At(0).Type().(*types.Named)
-		if !ok {
-			continue
-		}
-		firstType, ok := first.Underlying().(*types.Interface)
-		if !ok {
-			continue
-		}
-		if !types.Implements(firstType, testingT) {
-			continue
-		}
-
-		// Skip functions ending with f
-		if strings.HasSuffix(fdocs.Name, "f") && !*includeF {
-			continue
-		}
-
-		funcs = append(funcs, testFunc{*outputPkg, fdocs, fn})
-		importer.AddImportsFrom(sig.Params())
-	}
-	return importer, funcs, nil
+	_ = "STUB: not implemented"
+	return *new(imports.Importer), nil, nil
 }
 
-// parsePackageSource returns the types scope and the package documentation from the package
 func parsePackageSource(pkg string) (*types.Scope, *doc.Package, error) {
-	pd, err := build.Import(pkg, ".", 0)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	fset := token.NewFileSet()
-	fileList := make([]*ast.File, len(pd.GoFiles))
-	for i, fname := range pd.GoFiles {
-		src, err := os.ReadFile(path.Join(pd.Dir, fname))
-		if err != nil {
-			return nil, nil, err
-		}
-		// SkipObjectResolution for less memory usage in the go/types era
-		f, err := parser.ParseFile(fset, fname, src, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
-		if err != nil {
-			return nil, nil, err
-		}
-		fileList[i] = f
-	}
-
-	cfg := types.Config{
-		Importer: importer.ForCompiler(fset, "source", nil),
-	}
-	info := types.Info{
-		Defs: make(map[*ast.Ident]types.Object),
-	}
-	tp, err := cfg.Check(pkg, fset, fileList, &info)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	scope := tp.Scope()
-
-	docs, err := doc.NewFromFiles(fset, fileList, pkg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return scope, docs, nil
+	_ = "STUB: not implemented"
+	return nil, nil, nil
 }
 
 type testFunc struct {
@@ -218,139 +65,31 @@ type testFunc struct {
 	TypeInfo   *types.Func
 }
 
-func (f *testFunc) Qualifier(p *types.Package) string {
-	if p == nil || p.Name() == f.CurrentPkg {
-		return ""
-	}
-	return p.Name()
-}
+func (f *testFunc) Qualifier(p *types.Package) string { _ = "STUB: not implemented"; return "" }
 
-func (f *testFunc) Params() string {
-	sig := f.TypeInfo.Type().(*types.Signature)
-	params := sig.Params()
-	var p strings.Builder
-	comma := ""
-	to := params.Len()
-	var i int
+func (f *testFunc) Params() string { _ = "STUB: not implemented"; return "" }
 
-	if sig.Variadic() {
-		to--
-	}
-	for i = 1; i < to; i++ {
-		param := params.At(i)
-		p.WriteString(comma)
-		p.WriteString(param.Name())
-		p.WriteString(" ")
-		p.WriteString(types.TypeString(param.Type(), f.Qualifier))
-		comma = ", "
-	}
-	if sig.Variadic() {
-		param := params.At(params.Len() - 1)
-		fmt.Fprintf(&p, "%s%s ...%s", comma, param.Name(), types.TypeString(param.Type().(*types.Slice).Elem(), f.Qualifier))
-	}
-	return p.String()
-}
+func (f *testFunc) ForwardedParams() string { _ = "STUB: not implemented"; return "" }
 
-func (f *testFunc) ForwardedParams() string {
-	sig := f.TypeInfo.Type().(*types.Signature)
-	params := sig.Params()
-	var p strings.Builder
-	comma := ""
-	to := params.Len()
-	var i int
+func (f *testFunc) ParamsFormat() string { _ = "STUB: not implemented"; return "" }
 
-	if sig.Variadic() {
-		to--
-	}
-	for i = 1; i < to; i++ {
-		param := params.At(i)
-		p.WriteString(comma)
-		p.WriteString(param.Name())
-		comma = ", "
-	}
-	if sig.Variadic() {
-		param := params.At(params.Len() - 1)
-		fmt.Fprintf(&p, "%s%s...", comma, param.Name())
-	}
-	return p.String()
-}
+func (f *testFunc) ForwardedParamsFormat() string { _ = "STUB: not implemented"; return "" }
 
-func (f *testFunc) ParamsFormat() string {
-	return strings.Replace(f.Params(), "msgAndArgs", "msg string, args", 1)
-}
+func (f *testFunc) Comment() string { _ = "STUB: not implemented"; return "" }
 
-func (f *testFunc) ForwardedParamsFormat() string {
-	return strings.Replace(f.ForwardedParams(), "msgAndArgs", "append([]interface{}{msg}, args...)", 1)
-}
+func (f *testFunc) CommentFormat() string { _ = "STUB: not implemented"; return "" }
 
-func (f *testFunc) Comment() string {
-	return "// " + strings.Replace(strings.TrimSpace(f.DocInfo.Doc), "\n", "\n// ", -1)
-}
+func (f *testFunc) CommentWithoutT(receiver string) string { _ = "STUB: not implemented"; return "" }
 
-func (f *testFunc) CommentFormat() string {
-	search := f.DocInfo.Name
-	replace := fmt.Sprintf("%sf", f.DocInfo.Name)
-	comment := strings.ReplaceAll(f.Comment(), search, replace)
+func requireComment(comment string) string { _ = "STUB: not implemented"; return "" }
 
-	// NOTE: Some functions have msgAndArgs at the end. It needs to be omitted. (currently only EventuallyWithT)
-	// Change here if the original comment changed.
-	comment = strings.Replace(comment, `, "external state has not changed to 'true'; still false"`, "", 1)
-
-	exp := regexp.MustCompile(replace + `\((([^()]*|\([^()]*\))*)\)`)
-	return exp.ReplaceAllString(comment, replace+`($1, "error message %s", "formatted")`)
-}
-
-func (f *testFunc) CommentWithoutT(receiver string) string {
-	search := fmt.Sprintf("assert.%s(t, ", f.DocInfo.Name)
-	replace := fmt.Sprintf("%s.%s(", receiver, f.DocInfo.Name)
-	return strings.Replace(f.Comment(), search, replace, -1)
-}
-
-func requireComment(comment string) string {
-	const returnClause = "Returns whether the assertion was successful (true) or not (false)"
-	const emptyString = ""
-
-	comment = strings.ReplaceAll(comment, returnClause+".", emptyString)
-	comment = strings.ReplaceAll(comment, returnClause, emptyString)
-
-	// convert from: "if cond {\n  body\n}" to "cond\nbody"
-	ifBlockReg := regexp.MustCompile(`(?m)^([\t ]*)if (.+) \{\n((?:.*\n)*?)\s*\}`)
-
-	comment = ifBlockReg.ReplaceAllStringFunc(comment, func(match string) string {
-		nestedMatch := ifBlockReg.FindStringSubmatch(match)
-		indent, cond, body := nestedMatch[1], nestedMatch[2], nestedMatch[3]
-		out := []string{indent + cond}
-
-		for _, line := range strings.Split(
-			strings.TrimRight(body, "\n"),
-			"\n",
-		) {
-			if t := strings.TrimSpace(line); t != emptyString {
-				out = append(out, indent+t)
-			}
-		}
-
-		return strings.Join(out, "\n")
-	})
-
-	final := strings.TrimSpace(comment)
-	return "// " + strings.ReplaceAll(final, "\n", "\n// ")
-}
-
-func (f *testFunc) CommentRequire() string {
-	comment := strings.ReplaceAll(f.DocInfo.Doc, "assert.", "require.")
-	// Preserve assert.CollectT, even in package 'require'
-	comment = strings.ReplaceAll(comment, "require.CollectT", "assert.CollectT")
-	return requireComment(comment)
-}
+func (f *testFunc) CommentRequire() string { _ = "STUB: not implemented"; return "" }
 
 func (f *testFunc) CommentRequireWithoutT(receiver string) string {
-	assertCallRe := regexp.MustCompile(`assert\.(\w+)\(t, `)
-	comment := assertCallRe.ReplaceAllString(f.DocInfo.Doc, receiver+".$1(")
-	return requireComment(comment)
+	_ = "STUB: not implemented"
+	return ""
 }
 
-// Standard header https://go.dev/s/generatedcode.
 var headerTemplate = `// Code generated with github.com/stretchr/testify/_codegen; DO NOT EDIT.
 
 package {{.Name}}
